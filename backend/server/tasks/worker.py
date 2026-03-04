@@ -1,4 +1,5 @@
 from __future__ import annotations
+import socket
 import threading
 import time
 import uvicorn
@@ -8,7 +9,7 @@ from starlette.responses import PlainTextResponse
 from ..core.config import settings
 from .celery_app import celery_app
 
-# Метрики воркера
+# Worker metrics
 worker_ingest_total = Counter("worker_ingest_total", "Total ingested documents")
 worker_heartbeat = Gauge("worker_heartbeat", "Worker heartbeat", ["name"])
 
@@ -22,7 +23,7 @@ async def metrics_root() -> PlainTextResponse:
 
 
 def heartbeat_loop() -> None:
-    name = "celery-worker-1"
+    name = socket.gethostname()
     while True:
         worker_heartbeat.labels(name).set(time.time())
         time.sleep(5)

@@ -5,6 +5,7 @@ import hashlib
 import math
 import logging
 import os
+import threading
 
 from .interfaces import Embeddings
 from ..core.config import settings
@@ -13,13 +14,14 @@ try:  # pragma: no cover - module availability depends on environment
     from sentence_transformers import SentenceTransformer
     _HAS_SENTENCE_TRANSFORMERS = True
 except Exception:  # noqa: BLE001 - we intentionally swallow import issues here
-    SentenceTransformer = Any  # только для аннотаций/IDE, не используется при отсутствии пакета
+    SentenceTransformer = Any  # только для аннотаций/IDE
     _HAS_SENTENCE_TRANSFORMERS = False
 
 logger = logging.getLogger(__name__)
 
 _sbert_cache: Any | None = None
 _embeddings_singleton: Embeddings | None = None
+_embeddings_lock = threading.Lock()
 
 
 class HashEmbeddings(Embeddings):
@@ -85,5 +87,7 @@ def _build_embeddings() -> Embeddings:
 def get_embeddings() -> Embeddings:
     global _embeddings_singleton
     if _embeddings_singleton is None:
-        _embeddings_singleton = _build_embeddings()
+        with _embeddings_lock:
+            if _embeddings_singleton is None:
+                _embeddings_singleton = _build_embeddings()
     return _embeddings_singleton

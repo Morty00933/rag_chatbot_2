@@ -1,0 +1,13 @@
+# Hybrid mode: infra on host Docker, apps in Minikube
+qdrant:
+  enabled: false
+redis:
+  enabled: false
+ollama:
+  enabled: false
+
+infra:
+  external: true
+  ollamaHost: host.minikube.internal
+  qdrantHost: host.minikube.internal
+  redisHost: host.minikube.internal

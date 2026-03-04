@@ -5,8 +5,9 @@ from typing import Dict, Any, List
 import os
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound, select_autoescape
+from markupsafe import escape
 
-# Читаем конфиг из ENV (можно позже заменить на core.config)
+# Read config from ENV (can be replaced by core.config later)
 PROMPT_DIR = os.getenv("PROMPT_DIR", "prompts")
 PROMPT_LANG = os.getenv("PROMPT_LANG", "ru")
 PROMPT_VARIANT = os.getenv("PROMPT_VARIANT", "v1")
@@ -31,7 +32,7 @@ def _prompt_dir() -> Path:
 def _jinja_env() -> Environment:
     env = Environment(
         loader=FileSystemLoader(str(_prompt_dir())),
-        autoescape=select_autoescape(enabled_extensions=(), default_for_string=False),
+        autoescape=select_autoescape(enabled_extensions=(), default_for_string=True),
         trim_blocks=True,
         lstrip_blocks=True,
     )
@@ -80,5 +81,7 @@ def get_system_instruction(
 
 
 def build_user_prompt(question: str, contexts: List[str], system_instruction: str) -> str:
+    # Escape user input to prevent prompt injection via HTML/template chars
+    safe_question = str(escape(question))
     ctx = "\n---\n".join(contexts)
-    return f"{system_instruction}\n\nВопрос: {question}\n\nКонтекстные фрагменты:\n{ctx}\n\nОтвет:"
+    return f"{system_instruction}\n\nВопрос: {safe_question}\n\nКонтекстные фрагменты:\n{ctx}\n\nОтвет:"

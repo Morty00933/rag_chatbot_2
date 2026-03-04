@@ -1,0 +1,49 @@
+{{- if .Values.ollama.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-ollama
+  labels:
+    app.kubernetes.io/name: rag-chatbot
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: ollama
+spec:
+  serviceName: {{ .Release.Name }}-ollama
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: ollama
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rag-chatbot
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: ollama
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        fsGroup: 0
+      containers:
+        - name: ollama
+          image: "{{ .Values.ollama.image.repository }}:{{ .Values.ollama.image.tag }}"
+          imagePullPolicy: {{ .Values.ollama.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ollama.port }}
+              protocol: TCP
+          volumeMounts:
+            - name: ollama-models
+              mountPath: /root/.ollama
+          resources:
+            {{- toYaml .Values.ollama.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.ollama.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.ollama.readinessProbe | nindent 12 }}
+      volumes:
+        - name: ollama-models
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-ollama-models
+{{- end }}

@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    app.kubernetes.io/name: rag-chatbot
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  ENV: {{ .Values.config.env | quote }}
+  API_HOST: {{ .Values.config.apiHost | quote }}
+  API_PORT: {{ .Values.config.apiPort | quote }}
+  CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  MAX_UPLOAD_MB: {{ .Values.config.maxUploadMb | quote }}
+  JWT_EXPIRES_MIN: {{ .Values.config.jwtExpiresMin | quote }}
+  LLM_PROVIDER: {{ .Values.config.llmProvider | quote }}
+  LLM_MODEL: {{ .Values.config.llmModel | quote }}
+  OLLAMA_HOST: {{ if .Values.infra.external }}"http://{{ .Values.infra.ollamaHost }}:11434"{{ else }}"http://{{ .Release.Name }}-ollama:11434"{{ end }}
+  EMBED_PROVIDER: {{ .Values.config.embedProvider | quote }}
+  EMBED_MODEL: {{ .Values.config.embedModel | quote }}
+  EMBED_DIM: {{ .Values.config.embedDim | quote }}
+  VECTOR_BACKEND: {{ .Values.config.vectorBackend | quote }}
+  QDRANT_URL: {{ if .Values.infra.external }}"http://{{ .Values.infra.qdrantHost }}:6333"{{ else }}"http://{{ .Release.Name }}-qdrant:6333"{{ end }}
+  QDRANT_COLLECTION: {{ .Values.config.qdrantCollection | quote }}
+  DB_URL: {{ .Values.config.dbUrl | quote }}
+  DOCSTORE_PATH: {{ .Values.config.docstorePath | quote }}
+  PROMETHEUS_ENABLED: {{ .Values.config.prometheusEnabled | quote }}
+  API_METRICS_PATH: {{ .Values.config.apiMetricsPath | quote }}
+  WORKER_METRICS_PORT: {{ .Values.config.workerMetricsPort | quote }}
+  PROMPT_DIR: {{ .Values.config.promptDir | quote }}
+  PROMPT_LANG: {{ .Values.config.promptLang | quote }}
+  PROMPT_VARIANT: {{ .Values.config.promptVariant | quote }}
+  PROMPT_STRICT: {{ .Values.config.promptStrict | quote }}
+  PROMPT_CITE: {{ .Values.config.promptCite | quote }}
+  VITE_API_URL: {{ .Values.config.viteApiUrl | quote }}
+  VITE_APP_NAME: {{ .Values.config.viteAppName | quote }}

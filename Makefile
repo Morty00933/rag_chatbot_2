@@ -1,5 +1,6 @@
-```makefile
-.PHONY: up base pull-model down logs ps restart
+.PHONY: up base pull-model down logs ps restart test
+
+SHELL := C:/PROGRA~1/Git/usr/bin/bash.exe
 
 base:
 	docker compose up -d qdrant redis ollama
@@ -21,3 +22,6 @@ ps:
 
 restart:
 	docker compose restart
+
+test:
+	cd backend && python -m pytest tests/ -v

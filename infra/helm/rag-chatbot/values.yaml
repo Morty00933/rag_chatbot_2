@@ -1,0 +1,245 @@
+# ------------------------------------------------------------------
+# RAG Chatbot  —  Helm values  (minikube-friendly defaults)
+# ------------------------------------------------------------------
+
+# ---- API (FastAPI) ------------------------------------------------
+api:
+  replicaCount: 1
+  image:
+    repository: rag_chatbot_2-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ---- Worker (Celery) ----------------------------------------------
+worker:
+  replicaCount: 1
+  image:
+    repository: rag_chatbot_2-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  metricsPort: 8001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  livenessProbe:
+    httpGet:
+      path: /
+      port: metrics
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: metrics
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ---- Frontend (Node / Vite) ---------------------------------------
+frontend:
+  replicaCount: 1
+  image:
+    repository: rag_chatbot_2-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 20
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ---- Qdrant -------------------------------------------------------
+qdrant:
+  enabled: true
+  image:
+    repository: qdrant/qdrant
+    tag: v1.9.1
+    pullPolicy: IfNotPresent
+  ports:
+    http: 6333
+    grpc: 6334
+  storage:
+    size: 2Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ---- Redis --------------------------------------------------------
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7.2-alpine
+    pullPolicy: IfNotPresent
+  port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+
+# ---- Ollama -------------------------------------------------------
+ollama:
+  enabled: true
+  image:
+    repository: ollama/ollama
+    tag: "0.3.14"
+    pullPolicy: IfNotPresent
+  port: 11434
+  storage:
+    size: 10Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+  livenessProbe:
+    httpGet:
+      path: /api/tags
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /api/tags
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 3
+
+# ---- Persistent Volume Claims -------------------------------------
+persistence:
+  qdrantData:
+    size: 2Gi
+    storageClassName: ""
+    accessMode: ReadWriteOnce
+  ollamaModels:
+    size: 10Gi
+    storageClassName: ""
+    accessMode: ReadWriteOnce
+  appData:
+    size: 1Gi
+    storageClassName: ""
+    accessMode: ReadWriteOnce
+
+# ---- Application config (injected via ConfigMap) ------------------
+config:
+  env: dev
+  apiHost: "0.0.0.0"
+  apiPort: "8000"
+  corsOrigins: "http://localhost:5173,http://127.0.0.1:5173"
+  maxUploadMb: "25"
+  jwtExpiresMin: "60"
+  llmProvider: ollama
+  llmModel: "qwen2.5:3b"
+  ollamaHost: "http://ollama:11434"
+  embedProvider: sbert
+  embedModel: "sentence-transformers/all-MiniLM-L6-v2"
+  embedDim: "384"
+  vectorBackend: qdrant
+  qdrantCollection: kb
+  dbUrl: "sqlite+aiosqlite:///./data/app.db"
+  docstorePath: "./data/chunks"
+  prometheusEnabled: "true"
+  apiMetricsPath: /metrics
+  workerMetricsPort: "8001"
+  promptDir: prompts
+  promptLang: ru
+  promptVariant: v1
+  promptStrict: "true"
+  promptCite: "true"
+  viteApiUrl: "http://localhost:8010"
+  viteAppName: "RAG Demo"
+
+# ---- Secrets (base64-encoded placeholders) ------------------------
+secrets:
+  jwtSecret: "Y2hhbmdlbWU="          # changeme
+  redisUrl: "cmVkaXM6Ly9yZWRpcy1zdmM6NjM3OS8w"  # redis://redis-svc:6379/0
+  openaiApiKey: ""
+  hfApiToken: ""
+
+# -- External infrastructure hosts (for hybrid mode)
+infra:
+  external: false
+  ollamaHost: ""
+  qdrantHost: ""
+  redisHost: ""

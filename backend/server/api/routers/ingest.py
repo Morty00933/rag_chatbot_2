@@ -1,8 +1,7 @@
 from __future__ import annotations
 import hashlib
-from typing import Dict, List
-
-from typing import Tuple
+import logging
+from typing import Dict, List, Tuple
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -12,6 +11,9 @@ from ...services.vectorstore import get_vectorstore
 from ...services.indexing import Indexer
 from ...services.chunking import split_with_metadata
 from ...db import get_docstore
+from ...core.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -26,9 +28,8 @@ class IngestResponse(BaseModel):
 
 def _stable_document_id(filename: str, document_hash: str) -> int:
     """Build a deterministic integer identifier for a document."""
-
-    hasher = hashlib.blake2b(digest_size=8)
-    hasher.update(filename.encode("utf-8", errors="ignore"))
+    hasher = hashlib.blake2b(digest_size=16)  # 16 bytes for fewer collisions
+    hasher.update(filename.encode("utf-8", errors="replace"))
     hasher.update(b"\0")
     hasher.update(document_hash.encode("ascii"))
     return int.from_bytes(hasher.digest(), "big", signed=False)
@@ -40,8 +41,22 @@ async def ingest_file(file: UploadFile = File(...)) -> IngestResponse:
     if not content_bytes:
         raise HTTPException(400, "Empty file")
 
+    # Validate file size
+    max_bytes = settings.MAX_UPLOAD_MB * 1024 * 1024
+    if len(content_bytes) > max_bytes:
+        raise HTTPException(
+            413,
+            f"File too large: {len(content_bytes)} bytes "
+            f"(max {settings.MAX_UPLOAD_MB} MB)",
+        )
+
     try:
-        text = content_bytes.decode("utf-8", errors="ignore")
+        text = content_bytes.decode("utf-8", errors="replace")
+        if "\ufffd" in text:
+            logger.warning(
+                "File %s contains non-UTF-8 bytes (replaced with U+FFFD)",
+                file.filename,
+            )
     except Exception as e:
         raise HTTPException(400, f"Decode error: {e}")
 
@@ -90,10 +105,10 @@ async def ingest_file(file: UploadFile = File(...)) -> IngestResponse:
         chunks.append(rc["text"])
         items_for_store.append((cid, {"meta": meta, "text": rc["text"]}))
 
-    # Persist сырые тексты
+    # Persist raw texts
     get_docstore().bulk_put(items_for_store)
 
-    # Апсерт в векторку
+    # Upsert into vector store
     indexer = Indexer(get_embeddings(), get_vectorstore())
     n = indexer.upsert_chunks(chunks, metas)
 

@@ -1,0 +1,57 @@
+{{- if .Values.qdrant.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-qdrant-data
+  labels:
+    app.kubernetes.io/name: rag-chatbot
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: qdrant
+spec:
+  accessModes:
+    - {{ .Values.persistence.qdrantData.accessMode }}
+  {{- if .Values.persistence.qdrantData.storageClassName }}
+  storageClassName: {{ .Values.persistence.qdrantData.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.qdrantData.size }}
+{{- end }}
+---
+{{- if .Values.ollama.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-ollama-models
+  labels:
+    app.kubernetes.io/name: rag-chatbot
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: ollama
+spec:
+  accessModes:
+    - {{ .Values.persistence.ollamaModels.accessMode }}
+  {{- if .Values.persistence.ollamaModels.storageClassName }}
+  storageClassName: {{ .Values.persistence.ollamaModels.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.ollamaModels.size }}
+{{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-app-data
+  labels:
+    app.kubernetes.io/name: rag-chatbot
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: api
+spec:
+  accessModes:
+    - {{ .Values.persistence.appData.accessMode }}
+  {{- if .Values.persistence.appData.storageClassName }}
+  storageClassName: {{ .Values.persistence.appData.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.appData.size }}

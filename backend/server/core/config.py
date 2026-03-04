@@ -1,8 +1,10 @@
 from __future__ import annotations
+import logging
 from functools import lru_cache
-from pydantic_settings import BaseSettings  # <-- важно: из pydantic_settings
+from pydantic import model_validator
+from pydantic_settings import BaseSettings
 
-# pydantic v2: поля по умолчанию и типы — как в v2
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -41,6 +43,12 @@ class Settings(BaseSettings):
     # --- Redis/Celery ---
     REDIS_URL: str = "redis://redis:6379/0"
 
+    # --- Chat / retrieval ---
+    TOP_POOL: int = 24
+    FIRST_K: int = 12
+    FINAL_K: int = 6
+    MAX_CTX_LEN: int = 4000
+
     # --- Telemetry ---
     PROMETHEUS_ENABLED: bool = True
     API_METRICS_PATH: str = "/metrics"
@@ -50,6 +58,16 @@ class Settings(BaseSettings):
         "env_file": ".env",
         "extra": "ignore",
     }
+
+    @model_validator(mode="after")
+    def _validate_jwt_secret(self) -> "Settings":
+        if self.ENV != "dev" and self.JWT_SECRET in ("change_me", ""):
+            raise ValueError(
+                "JWT_SECRET must be changed from default in non-dev environments"
+            )
+        if self.JWT_SECRET == "change_me":
+            logger.warning("JWT_SECRET is default 'change_me' — fine for dev only")
+        return self
 
 
 @lru_cache(maxsize=1)

@@ -3,14 +3,11 @@
 #   PowerShell: $env:DOCKER_BUILDKIT="1"
 #   Bash: export DOCKER_BUILDKIT=1
 
-FROM python:3.11-slim
+FROM ghcr.io/astral-sh/uv:0.6-python3.11-bookworm-slim
 
 # Базовые переменные окружения
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_ROOT_USER_ACTION=ignore \
-    PIP_PREFER_BINARY=1
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
@@ -24,14 +21,13 @@ COPY requirements.txt /app/requirements.txt
 
 # 2) Ставим CPU-версию PyTorch до остальных пакетов (важно!)
 #    Используем официальный CPU index PyTorch, чтобы исключить ROCm/CUDA.
-RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --upgrade pip && \
-    pip install --index-url https://download.pytorch.org/whl/cpu \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system --index-url https://download.pytorch.org/whl/cpu \
         "torch==2.4.1"
 
 # 3) Остальные зависимости проекта
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r /app/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system -r /app/requirements.txt
 
 # 4) Копируем исходники (меняются чаще — не ломают слой зависимостей)
 COPY . /app
